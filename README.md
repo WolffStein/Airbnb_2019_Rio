@@ -16,7 +16,7 @@ git clone https://github.com/WolffStein/Airbnb_2019_Rio.git
 ```bash
 cd Airbnb_2019_Rio
 ```
-
+s
 ### 3️⃣ Instalar as dependências
 Execute o notebook **`install.ipynb`** para instalar automaticamente todas as bibliotecas listadas no `requirements.txt`.
 
