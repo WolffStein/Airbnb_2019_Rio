@@ -1,36 +1,27 @@
 import os
-import sys
 import pandas as pd
 import psycopg2
 from tqdm import tqdm
-from colorama import Fore, Style, init
+from colorama import Fore, Style
 
-# ===== Inicializações =====
-init(autoreset=True)
-sys.stdout.reconfigure(line_buffering=True)  # imprime os logs em tempo real
-
-# ===== Configurações do banco =====
+# === CONFIGURAÇÕES ===
 DB_HOST = os.getenv("DB_HOST", "db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "lakehouse")
 DB_USER = os.getenv("DB_USER", "admin")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "admin")
-CSV_PATH = "/data/base_de_dados_prata.csv"
 
-# ===== Conexão =====
-print(Fore.CYAN + "🔗 Conectando ao banco...")
+CSV_FILE = "/data/base_de_dados_prata.csv"
+
+# === CONEXÃO COM O BANCO ===
+print(Fore.CYAN + "🔗 Conectando ao banco..." + Style.RESET_ALL)
 conn = psycopg2.connect(
-    host=DB_HOST,
-    port=DB_PORT,
-    dbname=DB_NAME,
-    user=DB_USER,
-    password=DB_PASSWORD
+    host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD
 )
 cur = conn.cursor()
 
-# ===== Criação das tabelas =====
-print(Fore.YELLOW + "🧱 Criando tabelas (se não existirem)...")
-
+# === CRIAÇÃO DAS TABELAS (caso ainda não existam) ===
+print(Fore.YELLOW + "🧱 Criando tabelas (se não existirem)..." + Style.RESET_ALL)
 cur.execute("""
 CREATE TABLE IF NOT EXISTS dim_host (
     id_host SERIAL PRIMARY KEY,
@@ -91,126 +82,90 @@ CREATE TABLE IF NOT EXISTS fact_listing (
     price NUMERIC,
     security_deposit NUMERIC,
     cleaning_fee NUMERIC,
-    guests_included INT,
     extra_people NUMERIC,
-    minimum_nights INT,
-    maximum_nights INT
+    guests_included NUMERIC
 );
 """)
 conn.commit()
 
-# ===== Leitura do CSV =====
-print(Fore.CYAN + "📂 Lendo CSV...")
-df = pd.read_csv(CSV_PATH, sep=";", encoding="utf-8")
+# === LEITURA DA BASE PRATA ===
+print(Fore.BLUE + "📂 Lendo CSV..." + Style.RESET_ALL)
+df = pd.read_csv(CSV_FILE)
 
-# ===== Função auxiliar =====
-def insert_unique(table, unique_cols, values_dict):
-    """Insere registro se não existir e retorna o id."""
-    cols = list(values_dict.keys())
-    vals = [values_dict[c] for c in cols]
-    placeholders = ", ".join(["%s"] * len(cols))
-    cols_str = ", ".join(cols)
-    where_clause = " AND ".join([f"{c} = %s" for c in unique_cols])
+# Limitar a 2% dos registros para teste
+subset_size = int(len(df) * 0.02)
+df = df.head(subset_size)
+print(Fore.YELLOW + f"⚠️  Rodando com apenas {len(df)} registros (2% do total) para teste." + Style.RESET_ALL)
 
-    cur.execute(f"SELECT id_{table.split('_')[1]} FROM {table} WHERE {where_clause};",
-                [values_dict[c] for c in unique_cols])
-    result = cur.fetchone()
-    if result:
-        return result[0]
+# === INSERÇÃO NAS TABELAS ===
+print(Fore.GREEN + f"🚀 Inserindo {len(df)} registros... Isso pode levar alguns minutos." + Style.RESET_ALL)
 
-    cur.execute(
-        f"INSERT INTO {table} ({cols_str}) VALUES ({placeholders}) RETURNING id_{table.split('_')[1]};",
-        vals
-    )
-    return cur.fetchone()[0]
-
-# ===== População =====
-print(Fore.GREEN + f"🚀 Inserindo {len(df)} registros... Isso pode levar alguns minutos.")
-
-dim_counts = {"dim_host": 0, "dim_property": 0, "dim_location": 0, "dim_review": 0}
-fact_count = 0
-
-for _, row in tqdm(df.iterrows(), total=len(df), desc="Processando registros", disable=False, ascii=True, file=sys.stdout):
-    r = row.where(pd.notnull(row), None)
-
+for _, row in tqdm(df.iterrows(), total=len(df)):
     try:
-        # --- Dimensões ---
-        id_host = insert_unique("dim_host", ["host_id"], {
-            "host_id": r.get("host_id"),
-            "host_name": r.get("host_name"),
-            "host_response_time": r.get("host_response_time"),
-            "host_response_rate": r.get("host_response_rate"),
-            "host_is_superhost": r.get("host_is_superhost"),
-            "host_listings_count": r.get("host_listings_count")
-        })
-        dim_counts["dim_host"] += 1
-
-        id_property = insert_unique("dim_property",
-            ["property_type", "room_type", "bed_type", "accommodates", "bathrooms", "bedrooms", "beds"],
-            {
-                "property_type": r.get("property_type"),
-                "room_type": r.get("room_type"),
-                "bed_type": r.get("bed_type"),
-                "accommodates": r.get("accommodates"),
-                "bathrooms": r.get("bathrooms"),
-                "bedrooms": r.get("bedrooms"),
-                "beds": r.get("beds"),
-                "instant_bookable": r.get("instant_bookable"),
-                "is_business_travel_ready": r.get("is_business_travel_ready"),
-                "cancellation_policy": r.get("cancellation_policy")
-            }
-        )
-        dim_counts["dim_property"] += 1
-
-        id_location = insert_unique("dim_location", ["latitude", "longitude"], {
-            "latitude": r.get("latitude"),
-            "longitude": r.get("longitude")
-        })
-        dim_counts["dim_location"] += 1
-
-        id_review = insert_unique("dim_review", ["number_of_reviews", "review_scores_rating"], {
-            "number_of_reviews": r.get("number_of_reviews"),
-            "review_scores_rating": r.get("review_scores_rating"),
-            "review_scores_accuracy": r.get("review_scores_accuracy"),
-            "review_scores_cleanliness": r.get("review_scores_cleanliness"),
-            "review_scores_checkin": r.get("review_scores_checkin"),
-            "review_scores_communication": r.get("review_scores_communication"),
-            "review_scores_location": r.get("review_scores_location"),
-            "review_scores_value": r.get("review_scores_value")
-        })
-        dim_counts["dim_review"] += 1
-
-        # --- Fato ---
+        # Inserir dimensões
         cur.execute("""
-            INSERT INTO fact_listing (
-                id_host, id_property, id_location, id_review,
-                price, security_deposit, cleaning_fee,
-                guests_included, extra_people, minimum_nights, maximum_nights
-            )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);
+            INSERT INTO dim_host (host_id, host_name, host_response_time, host_response_rate, host_is_superhost, host_listings_count)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (host_id) DO NOTHING
+            RETURNING id_host;
         """, (
-            id_host, id_property, id_location, id_review,
-            r.get("price"), r.get("security_deposit"), r.get("cleaning_fee"),
-            r.get("guests_included"), r.get("extra_people"),
-            r.get("minimum_nights"), r.get("maximum_nights")
+            row["host_id"], row["host_name"], row["host_response_time"],
+            row["host_response_rate"], row["host_is_superhost"], row["host_listings_count"]
         ))
-        fact_count += 1
+        host_id = cur.fetchone()
+        if not host_id:
+            cur.execute("SELECT id_host FROM dim_host WHERE host_id = %s;", (row["host_id"],))
+            host_id = cur.fetchone()
+        host_id = host_id[0]
+
+        cur.execute("""
+            INSERT INTO dim_property (property_type, room_type, bed_type, accommodates, bathrooms, bedrooms, beds,
+                                      instant_bookable, is_business_travel_ready, cancellation_policy)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id_property;
+        """, (
+            row["property_type"], row["room_type"], row["bed_type"], row["accommodates"],
+            row["bathrooms"], row["bedrooms"], row["beds"],
+            row["instant_bookable"], row["is_business_travel_ready"], row["cancellation_policy"]
+        ))
+        property_id = cur.fetchone()[0]
+
+        cur.execute("""
+            INSERT INTO dim_location (latitude, longitude)
+            VALUES (%s, %s)
+            RETURNING id_location;
+        """, (row["latitude"], row["longitude"]))
+        location_id = cur.fetchone()[0]
+
+        cur.execute("""
+            INSERT INTO dim_review (number_of_reviews, review_scores_rating, review_scores_accuracy, review_scores_cleanliness,
+                                    review_scores_checkin, review_scores_communication, review_scores_location, review_scores_value)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id_review;
+        """, (
+            row["number_of_reviews"], row["review_scores_rating"], row["review_scores_accuracy"],
+            row["review_scores_cleanliness"], row["review_scores_checkin"],
+            row["review_scores_communication"], row["review_scores_location"], row["review_scores_value"]
+        ))
+        review_id = cur.fetchone()[0]
+
+        # Inserir fato (sem ano/mes)
+        cur.execute("""
+            INSERT INTO fact_listing (id_host, id_property, id_location, id_review,
+                                      price, security_deposit, cleaning_fee, extra_people, guests_included)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s);
+        """, (
+            host_id, property_id, location_id, review_id,
+            row["price"], row["security_deposit"], row["cleaning_fee"],
+            row["extra_people"], row["guests_included"]
+        ))
+
+        conn.commit()
 
     except Exception as e:
         conn.rollback()
-        print(Fore.RED + f"\n❌ Erro ao inserir linha: {e}")
-        continue
+        print(Fore.RED + f"❌ Erro ao inserir linha: {e}" + Style.RESET_ALL)
 
-conn.commit()
 cur.close()
 conn.close()
-
-# ===== Resumo =====
-print(Style.BRIGHT + "\n✅ ETL concluído com sucesso!")
-print(Fore.CYAN + f"   - Linhas processadas: {len(df)}")
-print(Fore.YELLOW + f"   - Inserções em dim_host: {dim_counts['dim_host']}")
-print(Fore.YELLOW + f"   - Inserções em dim_property: {dim_counts['dim_property']}")
-print(Fore.YELLOW + f"   - Inserções em dim_location: {dim_counts['dim_location']}")
-print(Fore.YELLOW + f"   - Inserções em dim_review: {dim_counts['dim_review']}")
-print(Fore.GREEN + f"   - Registros adicionados em fact_listing: {fact_count}")
-print(Fore.CYAN + "\n💡 Dica: use pgAdmin (http://localhost:5050) para explorar as tabelas!")
+print(Fore.GREEN + "✅ Carga concluída com sucesso!" + Style.RESET_ALL)
