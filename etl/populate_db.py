@@ -1,33 +1,36 @@
 import os
+import sys
 import pandas as pd
 import psycopg2
-from time import sleep
+from tqdm import tqdm
+from colorama import Fore, Style, init
 
-# Aguarda o Postgres iniciar
-sleep(15)
+# ===== Inicializações =====
+init(autoreset=True)
+sys.stdout.reconfigure(line_buffering=True)  # imprime os logs em tempo real
 
-# =====================================================
-# 1️⃣ Conexão com o banco
-# =====================================================
+# ===== Configurações do banco =====
+DB_HOST = os.getenv("DB_HOST", "db")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "lakehouse")
+DB_USER = os.getenv("DB_USER", "admin")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "admin")
+CSV_PATH = "/data/base_de_dados_prata.csv"
+
+# ===== Conexão =====
+print(Fore.CYAN + "🔗 Conectando ao banco...")
 conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=os.getenv("DB_PORT"),
+    host=DB_HOST,
+    port=DB_PORT,
+    dbname=DB_NAME,
+    user=DB_USER,
+    password=DB_PASSWORD
 )
 cur = conn.cursor()
-print("✅ Conectado ao banco PostgreSQL")
 
-# =====================================================
-# 2️⃣ Carrega a base prata
-# =====================================================
-df = pd.read_csv("/data/base_de_dados_prata.csv")
-df["dia"] = 1  # placeholder temporal
+# ===== Criação das tabelas =====
+print(Fore.YELLOW + "🧱 Criando tabelas (se não existirem)...")
 
-# =====================================================
-# 3️⃣ Criação das tabelas DIMENSÃO
-# =====================================================
 cur.execute("""
 CREATE TABLE IF NOT EXISTS dim_host (
     id_host SERIAL PRIMARY KEY,
@@ -78,163 +81,136 @@ CREATE TABLE IF NOT EXISTS dim_review (
 );
 """)
 
-# =====================================================
-# 4️⃣ Criação da tabela FATO
-# =====================================================
 cur.execute("""
-CREATE TABLE IF NOT EXISTS fato_airbnb (
-    id_fato SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS fact_listing (
+    id_listing SERIAL PRIMARY KEY,
     id_host INT REFERENCES dim_host(id_host),
     id_property INT REFERENCES dim_property(id_property),
     id_location INT REFERENCES dim_location(id_location),
     id_review INT REFERENCES dim_review(id_review),
-
     price NUMERIC,
     security_deposit NUMERIC,
     cleaning_fee NUMERIC,
-    guests_included NUMERIC,
+    guests_included INT,
     extra_people NUMERIC,
-    minimum_nights NUMERIC,
-    n_amenities NUMERIC,
-    ano INT,
-    mes INT,
-    dia INT
+    minimum_nights INT,
+    maximum_nights INT
 );
 """)
 conn.commit()
-print("🧱 Estrutura criada com sucesso!")
 
-# =====================================================
-# 5️⃣ Criação e carga das dimensões
-# =====================================================
-dim_host = df[[
-    'host_id', 'host_name',
-    'host_response_time', 'host_response_rate',
-    'host_is_superhost', 'host_listings_count'
-]].drop_duplicates().reset_index(drop=True)
+# ===== Leitura do CSV =====
+print(Fore.CYAN + "📂 Lendo CSV...")
+df = pd.read_csv(CSV_PATH, sep=";", encoding="utf-8")
 
-dim_property = df[[
-    'property_type', 'room_type', 'bed_type',
-    'accommodates', 'bathrooms', 'bedrooms', 'beds',
-    'instant_bookable', 'is_business_travel_ready', 'cancellation_policy'
-]].drop_duplicates().reset_index(drop=True)
+# ===== Função auxiliar =====
+def insert_unique(table, unique_cols, values_dict):
+    """Insere registro se não existir e retorna o id."""
+    cols = list(values_dict.keys())
+    vals = [values_dict[c] for c in cols]
+    placeholders = ", ".join(["%s"] * len(cols))
+    cols_str = ", ".join(cols)
+    where_clause = " AND ".join([f"{c} = %s" for c in unique_cols])
 
-dim_location = df[['latitude', 'longitude']].drop_duplicates().reset_index(drop=True)
+    cur.execute(f"SELECT id_{table.split('_')[1]} FROM {table} WHERE {where_clause};",
+                [values_dict[c] for c in unique_cols])
+    result = cur.fetchone()
+    if result:
+        return result[0]
 
-dim_review = df[[
-    'number_of_reviews', 'review_scores_rating', 'review_scores_accuracy',
-    'review_scores_cleanliness', 'review_scores_checkin',
-    'review_scores_communication', 'review_scores_location', 'review_scores_value'
-]].drop_duplicates().reset_index(drop=True)
-
-# Popula cada dimensão
-for _, row in dim_host.iterrows():
-    cur.execute("""
-        INSERT INTO dim_host (
-            host_id, host_name, host_response_time,
-            host_response_rate, host_is_superhost, host_listings_count
-        )
-        VALUES (%s,%s,%s,%s,%s,%s)
-        ON CONFLICT (host_id) DO NOTHING;
-    """, tuple(row))
-
-for _, row in dim_property.iterrows():
-    cur.execute("""
-        INSERT INTO dim_property (
-            property_type, room_type, bed_type,
-            accommodates, bathrooms, bedrooms, beds,
-            instant_bookable, is_business_travel_ready, cancellation_policy
-        )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT DO NOTHING;
-    """, tuple(row))
-
-for _, row in dim_location.iterrows():
-    cur.execute("""
-        INSERT INTO dim_location (latitude, longitude)
-        VALUES (%s,%s)
-        ON CONFLICT DO NOTHING;
-    """, tuple(row))
-
-for _, row in dim_review.iterrows():
-    cur.execute("""
-        INSERT INTO dim_review (
-            number_of_reviews, review_scores_rating, review_scores_accuracy,
-            review_scores_cleanliness, review_scores_checkin,
-            review_scores_communication, review_scores_location, review_scores_value
-        )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT DO NOTHING;
-    """, tuple(row))
-
-conn.commit()
-print("📚 Dimensões populadas com sucesso!")
-
-# =====================================================
-# 6️⃣ Criação do dicionário de mapeamento de IDs
-# =====================================================
-# Mapeia host_id (do CSV) para id_host (gerado pelo banco)
-cur.execute("SELECT host_id, id_host FROM dim_host;")
-host_map = dict(cur.fetchall())
-
-# Mapeia latitude/longitude -> id_location
-cur.execute("SELECT latitude, longitude, id_location FROM dim_location;")
-loc_map = {(float(a), float(b)): c for a, b, c in cur.fetchall()}
-
-# Mapeia hashes de review para id_review
-cur.execute("""
-    SELECT number_of_reviews, review_scores_rating, id_review
-    FROM dim_review;
-""")
-review_map = {
-    (float(a or 0), float(b or 0)): c
-    for a, b, c in cur.fetchall()
-}
-
-conn.commit()
-
-# =====================================================
-# 7️⃣ População da FATO
-# =====================================================
-insert_sql = """
-    INSERT INTO fato_airbnb (
-        id_host, id_property, id_location, id_review,
-        price, security_deposit, cleaning_fee,
-        guests_included, extra_people, minimum_nights,
-        n_amenities, ano, mes, dia
+    cur.execute(
+        f"INSERT INTO {table} ({cols_str}) VALUES ({placeholders}) RETURNING id_{table.split('_')[1]};",
+        vals
     )
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);
-"""
+    return cur.fetchone()[0]
 
-for _, row in df.iterrows():
-    id_host = host_map.get(row["host_id"])
-    id_location = loc_map.get((float(row["latitude"]), float(row["longitude"])))
-    id_review = review_map.get(
-        (float(row["number_of_reviews"] or 0), float(row["review_scores_rating"] or 0))
-    )
+# ===== População =====
+print(Fore.GREEN + f"🚀 Inserindo {len(df)} registros... Isso pode levar alguns minutos.")
 
-    # pulando registros inválidos
-    if not id_host or not id_location or not id_review:
+dim_counts = {"dim_host": 0, "dim_property": 0, "dim_location": 0, "dim_review": 0}
+fact_count = 0
+
+for _, row in tqdm(df.iterrows(), total=len(df), desc="Processando registros", disable=False, ascii=True, file=sys.stdout):
+    r = row.where(pd.notnull(row), None)
+
+    try:
+        # --- Dimensões ---
+        id_host = insert_unique("dim_host", ["host_id"], {
+            "host_id": r.get("host_id"),
+            "host_name": r.get("host_name"),
+            "host_response_time": r.get("host_response_time"),
+            "host_response_rate": r.get("host_response_rate"),
+            "host_is_superhost": r.get("host_is_superhost"),
+            "host_listings_count": r.get("host_listings_count")
+        })
+        dim_counts["dim_host"] += 1
+
+        id_property = insert_unique("dim_property",
+            ["property_type", "room_type", "bed_type", "accommodates", "bathrooms", "bedrooms", "beds"],
+            {
+                "property_type": r.get("property_type"),
+                "room_type": r.get("room_type"),
+                "bed_type": r.get("bed_type"),
+                "accommodates": r.get("accommodates"),
+                "bathrooms": r.get("bathrooms"),
+                "bedrooms": r.get("bedrooms"),
+                "beds": r.get("beds"),
+                "instant_bookable": r.get("instant_bookable"),
+                "is_business_travel_ready": r.get("is_business_travel_ready"),
+                "cancellation_policy": r.get("cancellation_policy")
+            }
+        )
+        dim_counts["dim_property"] += 1
+
+        id_location = insert_unique("dim_location", ["latitude", "longitude"], {
+            "latitude": r.get("latitude"),
+            "longitude": r.get("longitude")
+        })
+        dim_counts["dim_location"] += 1
+
+        id_review = insert_unique("dim_review", ["number_of_reviews", "review_scores_rating"], {
+            "number_of_reviews": r.get("number_of_reviews"),
+            "review_scores_rating": r.get("review_scores_rating"),
+            "review_scores_accuracy": r.get("review_scores_accuracy"),
+            "review_scores_cleanliness": r.get("review_scores_cleanliness"),
+            "review_scores_checkin": r.get("review_scores_checkin"),
+            "review_scores_communication": r.get("review_scores_communication"),
+            "review_scores_location": r.get("review_scores_location"),
+            "review_scores_value": r.get("review_scores_value")
+        })
+        dim_counts["dim_review"] += 1
+
+        # --- Fato ---
+        cur.execute("""
+            INSERT INTO fact_listing (
+                id_host, id_property, id_location, id_review,
+                price, security_deposit, cleaning_fee,
+                guests_included, extra_people, minimum_nights, maximum_nights
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);
+        """, (
+            id_host, id_property, id_location, id_review,
+            r.get("price"), r.get("security_deposit"), r.get("cleaning_fee"),
+            r.get("guests_included"), r.get("extra_people"),
+            r.get("minimum_nights"), r.get("maximum_nights")
+        ))
+        fact_count += 1
+
+    except Exception as e:
+        conn.rollback()
+        print(Fore.RED + f"\n❌ Erro ao inserir linha: {e}")
         continue
 
-    cur.execute(insert_sql, (
-        id_host, None, id_location, id_review,  # id_property pode ser None se não precisar
-        row["price"], row["security_deposit"], row["cleaning_fee"],
-        row["guests_included"], row["extra_people"], row["minimum_nights"],
-        row["n_amenities"], row["ano"], row["mes"], row["dia"]
-    ))
-
 conn.commit()
-print("🏗️ Fato populada com sucesso!")
-
-# =====================================================
-# 8️⃣ Criação de índices
-# =====================================================
-cur.execute("CREATE INDEX IF NOT EXISTS idx_fato_host ON fato_airbnb (id_host);")
-cur.execute("CREATE INDEX IF NOT EXISTS idx_fato_location ON fato_airbnb (id_location);")
-cur.execute("CREATE INDEX IF NOT EXISTS idx_fato_review ON fato_airbnb (id_review);")
-conn.commit()
-
 cur.close()
 conn.close()
-print("🎉 ETL concluído com sucesso!")
+
+# ===== Resumo =====
+print(Style.BRIGHT + "\n✅ ETL concluído com sucesso!")
+print(Fore.CYAN + f"   - Linhas processadas: {len(df)}")
+print(Fore.YELLOW + f"   - Inserções em dim_host: {dim_counts['dim_host']}")
+print(Fore.YELLOW + f"   - Inserções em dim_property: {dim_counts['dim_property']}")
+print(Fore.YELLOW + f"   - Inserções em dim_location: {dim_counts['dim_location']}")
+print(Fore.YELLOW + f"   - Inserções em dim_review: {dim_counts['dim_review']}")
+print(Fore.GREEN + f"   - Registros adicionados em fact_listing: {fact_count}")
+print(Fore.CYAN + "\n💡 Dica: use pgAdmin (http://localhost:5050) para explorar as tabelas!")

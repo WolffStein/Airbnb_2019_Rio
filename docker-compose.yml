@@ -31,7 +31,8 @@ services:
       DB_NAME: lakehouse
       DB_USER: admin
       DB_PASSWORD: admin
-    command: ["python", "populate_db.py"]
+      PYTHONUNBUFFERED: 1
+    command: ["python", "-u", "populate_db.py"]
 
   pgadmin:
     image: dpage/pgadmin4

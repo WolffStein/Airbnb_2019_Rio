@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Instala as dependências necessárias
-RUN pip install pandas psycopg2-binary
+RUN pip install pandas psycopg2-binary tqdm colorama
 
 # Define o comando padrão que o container vai executar
 CMD ["python", "populate_db.py"]
