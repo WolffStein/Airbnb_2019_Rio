@@ -10,110 +10,52 @@ A camada prata é obtida executando a célula 39 do arquivo `AirBnB.ipynb`
 
 ## 2. Entidades e Atributos
 
-### **Host**
+Perfeito 👌
+Abaixo está o **Modelo Entidade-Relacionamento (ME-R)** no **mesmo formato do exemplo da imagem**, com chaves primárias sublinhadas e mantendo os nomes originais do seu conjunto de dados (incluindo `host_id` e `host_name`).
 
-**Descrição:** Representa o proprietário ou administrador responsável por um ou mais anúncios.
+---
 
-| Atributo         | Tipo conceitual     | Descrição                                        |
-| ---------------- | ------------------- | ------------------------------------------------ |
-| `host_id`        | Identificador       | Identificador único do anfitrião                 |
-| `response_time`  | Texto categórico    | Tempo médio de resposta (ex.: within an hour)  |
-| `response_rate`  | Numérico percentual | Taxa de resposta (%)                             |
-| `is_superhost`   | Booleano            | Indica se o anfitrião é Superhost              |
-| `listings_count` | Numérico inteiro    | Quantidade total de anúncios ativos do anfitrião |
+# Modelo Entidade-Relacionamento (ME-R)
 
-**Observação:** cada Host pode ter **múltiplos anúncios (1:N)**.
+## **ENTIDADES:**
+* HOST
+* PROPERTY
+* LOCATION
+* REVIEW
 
-### **Listing**
+## **ATRIBUTOS:**
 
-**Descrição:** Representa uma acomodação (anúncio) cadastrada na plataforma.
+**HOST**: (<ins>host_id</ins>, host_name, host_response_time, host_response_rate, host_is_superhost, host_listings_count)
 
-| Atributo                        | Tipo conceitual  | Descrição                                     |
-| ------------------------------- | ---------------- | --------------------------------------------- |
-| `listing_id`                    | Identificador    | Identificador único do anúncio                |
-| `property_type`                 | Texto categórico | Tipo de propriedade (ex.: *Apartment, House*) |
-| `room_type`                     | Texto categórico | Tipo de quarto (ex.: *Entire home/apt*)       |
-| `bed_type`                      | Texto categórico | Tipo de cama principal                        |
-| `accommodates`                  | Numérico inteiro | Número máximo de hóspedes                     |
-| `bathrooms`, `bedrooms`, `beds` | Numérico         | Quantidades físicas do imóvel                 |
-| `latitude`, `longitude`         | Numérico         | Localização geográfica                        |
-| `n_amenities`                   | Numérico inteiro | Número total de amenidades ofertadas          |
+**PROPERTY**: (<ins>idProperty</ins>, property_type, room_type, accommodates, bathrooms, bedrooms, beds, bed_type, price,
+security_deposit, cleaning_fee, guests_included, extra_people, minimum_nights, instant_bookable,
+is_business_travel_ready, cancellation_policy, n_amenities, host_id)
 
-**Relacionamentos:**
+**LOCATION**: (latitude, longitude)
 
-* **1:N com Host**
-* **N:M com Amenity**
-* **1:N com ListingMonthly**
-
-### **Amenity**
-
-**Descrição:** Representa uma amenidade (comodidade) oferecida nos anúncios.
-
-| Atributo       | Tipo conceitual | Descrição                                           |
-| -------------- | --------------- | --------------------------------------------------- |
-| `amenity_id`   | Identificador   | Identificador da amenidade                          |
-| `amenity_name` | Texto           | Nome da amenidade (ex.: *Wi-Fi*, *Kitchen*, *Pool*) |
-
-**Relacionamento:** N:M com `Listing` via tabela associativa `ListingAmenity`.
+**REVIEW**: (<ins>idReview</ins>, number_of_reviews, review_scores_rating, review_scores_accuracy,
+review_scores_cleanliness, review_scores_checkin, review_scores_communication,
+review_scores_location, review_scores_value, ano, mes, host_id)
 
 
-### **ListingAmenity**
 
-**Descrição:** Entidade associativa que representa o relacionamento N:M entre *Listing* e *Amenity*.
+## **RELACIONAMENTOS:**
 
-| Atributo     | Tipo conceitual | Descrição              |
-| ------------ | --------------- | ---------------------- |
-| `listing_id` | FK              | Referência ao anúncio  |
-| `amenity_id` | FK              | Referência à amenidade |
+**PROPERTY – pertence – HOST**
+Um HOST pode ter vários imóveis (PROPERTY), e cada PROPERTY pertence a um único HOST.
+**Cardinalidade:** 1:N
 
-**Chave Primária:** composta (`listing_id`, `amenity_id`).
+**PROPERTY – está_em – LOCATION**
+Uma LOCATION pode conter vários imóveis (PROPERTY), mas cada PROPERTY pertence a uma única LOCATION.
+**Cardinalidade:** 1:N
 
-###  **Date**
+**REVIEW – refere_se – PROPERTY**
+Uma PROPERTY pode ter várias avaliações (REVIEW), e cada REVIEW pertence a uma única PROPERTY.
+**Cardinalidade:** 1:N
 
-**Descrição:** Representa o período (ano/mês) de referência do conjunto de dados.
+---
 
-| Atributo  | Tipo conceitual  | Descrição                             |
-| --------- | ---------------- | ------------------------------------- |
-| `date_id` | Identificador    | Código único do período (e.g. 201904) |
-| `year`    | Numérico inteiro | Ano de referência                     |
-| `month`   | Numérico inteiro | Mês de referência (1–12)              |
-
-**Relacionamento:** 1:N com `ListingMonthly`.
-
-### **ListingMonthly**
-
-**Descrição:** Representa o retrato mensal de cada anúncio, contendo preços, notas de avaliação e políticas de reserva.
-Cada instância corresponde à combinação `(listing_id, date_id)`.
-
-| Atributo                                           | Tipo conceitual  | Descrição                                              |
-| -------------------------------------------------- | ---------------- | ------------------------------------------------------ |
-| `listing_id`                                       | FK               | Identificador do anúncio                               |
-| `date_id`                                          | FK               | Identificador do período                               |
-| `price`                                            | Numérico real    | Preço da diária                                        |
-| `security_deposit`, `cleaning_fee`, `extra_people` | Numérico real    | Taxas e valores adicionais                             |
-| `guests_included`                                  | Inteiro          | Número de hóspedes incluídos no valor base             |
-| `number_of_reviews`                                | Inteiro          | Total de avaliações acumuladas                         |
-| `review_scores_*`                                  | Numérico real    | Conjunto de notas (rating, cleanliness, location etc.) |
-| `instant_bookable`                                 | Booleano         | Indica se o imóvel pode ser reservado instantaneamente |
-| `is_business_travel_ready`                         | Booleano         | Indica se o anúncio atende critérios corporativos      |
-| `cancellation_policy`                              | Texto categórico | Política de cancelamento                               |
-| `n_amenities`                                      | Inteiro          | Quantidade total de amenidades (campo derivado)        |
-
-**Relacionamentos:**
-
-* 1:N com `Listing`
-* 1:N com `Date`
-
-
-## 3. Relacionamentos e Cardinalidades
-
-| Relacionamento               | Entidades | Cardinalidade                                                             |
-| ---------------------------- | --------- | ------------------------------------------------------------------------- | 
-| `Host` – `Listing`           | 1:N       | Um host possui vários anúncios; cada anúncio pertence a um único host     |           
-| `Listing` – `ListingMonthly` | 1:N       | Cada anúncio possui vários registros mensais                              |           
-| `Date` – `ListingMonthly`    | 1:N       | Cada mês agrega vários registros de anúncios                              |           
-| `Listing` – `Amenity`        | N:M       | Um anúncio pode ter várias amenidades e vice-versa (via `ListingAmenity`) |           
-
+Deseja que eu gere **esse mesmo MER em `.drawio`** (com as chaves sublinhadas e ligações 1:N visuais)?
 
 # Dicionário de Dados (DD)
 
