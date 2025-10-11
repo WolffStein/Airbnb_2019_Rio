@@ -1,94 +1,73 @@
 # Modelo Entidade-Relacionamento (MER)
 
-## 1. Introdução
+## **ENTIDADES**
 
-O Modelo Entidade-Relacionamento (MER) descreve de forma conceitual as principais **entidades, atributos e relacionamentos** do banco de dados do projeto *Airbnb Rio de Janeiro 2019*.
-Objetiva representar a estrutura lógica dos dados coletados da plataforma, permitindo análise e normalização futura.
-
-A modelagem parte do conjunto de dados extraidos na camada prata (`base_de_dados_prata.csv`), que contém informações sobre anfitriões, anúncios, avaliações, políticas de reserva e características das propriedades.
-A camada prata é obtida executando a célula 39 do arquivo `AirBnB.ipynb` 
-
-## 2. Modelo Entidade-Relacionamento (ME-R)
-
-### **ENTIDADES:**
 * HOST
 * PROPERTY
 * LOCATION
 * REVIEW
 
-### **ATRIBUTOS:**
+## **ATRIBUTOS**
 
-**HOST**: (<ins>host_id</ins>, host_name, host_response_time, host_response_rate, host_is_superhost, host_listings_count)
+**HOST**: (<ins>id_host</ins>, host_id, host_name, host_response_time, host_response_rate, host_is_superhost, host_listings_count)
 
-**PROPERTY**: (<ins>property_id</ins>, property_type, room_type, accommodates, bathrooms, bedrooms, beds, bed_type,
-price, security_deposit, cleaning_fee, guests_included, extra_people, minimum_nights,
-instant_bookable, is_business_travel_ready, cancellation_policy, n_amenities,
-host_id)
+**PROPERTY**: (<ins>id_property</ins>, property_type, room_type, bed_type, accommodates, bathrooms, bedrooms, beds, instant_bookable, is_business_travel_ready, cancellation_policy)
 
-**LOCATION**: (latitude, longitude)
+**LOCATION**: (<ins>id_location</ins>, latitude, longitude)
 
-**REVIEW**
-(<ins>review_id</ins>, number_of_reviews, review_scores_rating,
-review_scores_accuracy, review_scores_cleanliness, review_scores_checkin,
-review_scores_communication, review_scores_location, review_scores_value, ano, mes, dia host_id)
+**REVIEW**: (<ins>id_review</ins>, number_of_reviews, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, review_scores_checkin, review_scores_communication, review_scores_location, review_scores_value)
 
-### **RELACIONAMENTOS:**
+## **RELACIONAMENTOS**
 
-* HOST (1) ——< PROPERTY (N)
+* **HOST (1) ——< PROPERTY (N)**
   * Um host pode possuir vários imóveis, mas cada imóvel pertence a um único host.
 
-* HOST (1) ——< REVIEW (N)
-  * Um host pode receber várias avaliações (uma para cada imóvel seu), mas cada review pertence a um host.
+* **LOCATION (1) ——< PROPERTY (N)**
+  * Uma localização pode conter vários imóveis, mas cada imóvel pertence a uma única localização.
 
-* LOCATION (1) ——< PROPERTY (N)
-  * Uma localização pode ter vários imóveis, mas cada imóvel tem uma única localização.
+* **HOST (1) ——< REVIEW (N)**
+  * Um host pode receber várias avaliações, mas cada avaliação pertence a um único host.
 
+---
 
 # Dicionário de Dados (DD)
 
-| **Entidade** | **Atributo**                | **Tipo de Dado** | **Tamanho / Formato** | **Nulo** | **Descrição**                                                |
-| ------------ | --------------------------- | ---------------- | --------------------- | -------- | ------------------------------------------------------------ |
-| **HOST**     | host_id                     | INT              | —                     | NÃO      | Identificador único do anfitrião                             |
-|              | host_name                   | VARCHAR          | 100                   | NÃO      | Nome do anfitrião                                            |
-|              | host_response_time          | VARCHAR          | 50                    | SIM      | Tempo médio de resposta do anfitrião                         |
-|              | host_response_rate          | VARCHAR          | 10                    | SIM      | Taxa de resposta (ex.: “100%”)                               |
-|              | host_is_superhost           | BOOLEAN             | —                    | NÃO      | Indica se é Superhost (t/f)                                  |
-|              | host_listings_count         | INT              | —                     | SIM      | Quantidade de propriedades cadastradas                       |
-| **PROPERTY** | property_id                 | INT              | —                     | NÃO      | Identificador do imóvel                                      |
-|              | property_type               | VARCHAR          | 50                    | SIM      | Tipo de imóvel (ex.: “Apartment”, “Condominium”)             |
-|              | room_type                   | VARCHAR          | 50                    | SIM      | Tipo de quarto oferecido                                     |
-|              | accommodates                | INT              | —                     | SIM      | Capacidade máxima de hóspedes                                |
-|              | bathrooms                   | DECIMAL          | 2,1                   | SIM      | Número de banheiros                                          |
-|              | bedrooms                    | INT              | —                     | SIM      | Número de quartos                                            |
-|              | beds                        | INT              | —                     | SIM      | Número de camas                                              |
-|              | bed_type                    | VARCHAR          | 50                    | SIM      | Tipo de cama                                                 |
-|              | price                       | DECIMAL          | 10,2                  | NÃO      | Valor da diária                                              |
-|              | security_deposit            | DECIMAL          | 10,2                  | SIM      | Valor do depósito de segurança                               |
-|              | cleaning_fee                | DECIMAL          | 10,2                  | SIM      | Taxa de limpeza                                              |
-|              | guests_included             | INT              | —                     | SIM      | Número de hóspedes incluídos no preço base                   |
-|              | extra_people                | DECIMAL          | 10,2                  | SIM      | Valor cobrado por hóspede adicional                          |
-|              | minimum_nights              | INT              | —                     | SIM      | Número mínimo de noites exigido                              |
-|              | maximum_nights              | INT              | —                     | SIM      | Número máximo de noites permitido                            |
-|              | instant_bookable            | CHAR             | 1                     | SIM      | Indica se o imóvel pode ser reservado instantaneamente (t/f) |
-|              | is_business_travel_ready    | CHAR             | 1                     | SIM      | Indica se é adequado para viagens a trabalho                 |
-|              | cancellation_policy         | VARCHAR          | 100                   | SIM      | Política de cancelamento aplicada                            |
-|              | n_amenities                 | INT              | —                     | SIM      | Quantidade de comodidades listadas                           |
-|              | host_id                     | INT              | —                     | NÃO      | Chave estrangeira que referencia HOST                        |
-| **LOCATION** | latitude                    | DECIMAL          | 10,6                  | NÃO      | Coordenada geográfica (latitude)                             |
-|              | longitude                   | DECIMAL          | 10,6                  | NÃO      | Coordenada geográfica (longitude)                            |
-| **REVIEW**   | review_id                   | INT              | —                     | NÃO      | Identificador da avaliação                                   |
-|              | number_of_reviews           | INT              | —                     | SIM      | Total de avaliações recebidas                                |
-|              | review_scores_rating        | DECIMAL          | 3,1                   | SIM      | Nota geral média                                             |
-|              | review_scores_accuracy      | DECIMAL          | 3,1                   | SIM      | Nota de precisão                                             |
-|              | review_scores_cleanliness   | DECIMAL          | 3,1                   | SIM      | Nota de limpeza                                              |
-|              | review_scores_checkin       | DECIMAL          | 3,1                   | SIM      | Nota de check-in                                             |
-|              | review_scores_communication | DECIMAL          | 3,1                   | SIM      | Nota de comunicação                                          |
-|              | review_scores_location      | DECIMAL          | 3,1                   | SIM      | Nota de localização                                          |
-|              | review_scores_value         | DECIMAL          | 3,1                   | SIM      | Nota de custo-benefício                                      |
-|              | ano                         | INT              | 4                     | NÃO      | Ano da avaliação ou registro                                 |
-|              | mes                         | INT              | 2                     | NÃO      | Mês da avaliação ou registro                                 |
-|              | dia                         | INT              | 2                     | NÃO      | Dia da avaliação ou registro                                 |
-|              | host_id                     | INT              | —                     | NÃO      | Chave estrangeira que referencia HOST                        |
+| **Entidade** | **Atributo**                | **Tipo de Dado** | **Tamanho / Formato** | **Nulo** | **Descrição**                                       |
+| ------------ | --------------------------- | ---------------- | --------------------- | -------- | --------------------------------------------------- |
+| **HOST**     | id_host                     | SERIAL           | —                     | NÃO      | Identificador interno da tabela                     |
+|              | host_id                     | NUMERIC          | —                     | NÃO      | Identificador único do anfitrião                    |
+|              | host_name                   | TEXT             | —                     | SIM      | Nome do anfitrião                                   |
+|              | host_response_time          | TEXT             | —                     | SIM      | Tempo médio de resposta do anfitrião                |
+|              | host_response_rate          | NUMERIC          | —                     | SIM      | Taxa de resposta em porcentagem                     |
+|              | host_is_superhost           | BOOLEAN          | —                     | SIM      | Indica se o anfitrião é Superhost                   |
+|              | host_listings_count         | NUMERIC          | —                     | SIM      | Quantidade de imóveis listados pelo anfitrião       |
+| **PROPERTY** | id_property                 | SERIAL           | —                     | NÃO      | Identificador interno da tabela                     |
+|              | property_type               | TEXT             | —                     | SIM      | Tipo de propriedade (ex.: apartamento, casa, etc.)  |
+|              | room_type                   | TEXT             | —                     | SIM      | Tipo de quarto oferecido                            |
+|              | bed_type                    | TEXT             | —                     | SIM      | Tipo de cama disponível                             |
+|              | accommodates                | NUMERIC          | —                     | SIM      | Capacidade máxima de hóspedes                       |
+|              | bathrooms                   | NUMERIC          | —                     | SIM      | Quantidade de banheiros                             |
+|              | bedrooms                    | NUMERIC          | —                     | SIM      | Quantidade de quartos                               |
+|              | beds                        | NUMERIC          | —                     | SIM      | Quantidade de camas                                 |
+|              | instant_bookable            | BOOLEAN          | —                     | SIM      | Indica se a reserva pode ser feita instantaneamente |
+|              | is_business_travel_ready    | BOOLEAN          | —                     | SIM      | Indica se é adequado para viagens a trabalho        |
+|              | cancellation_policy         | TEXT             | —                     | SIM      | Política de cancelamento aplicada                   |
+| **LOCATION** | id_location                 | SERIAL           | —                     | NÃO      | Identificador interno da tabela                     |
+|              | latitude                    | NUMERIC          | —                     | SIM      | Coordenada geográfica de latitude                   |
+|              | longitude                   | NUMERIC          | —                     | SIM      | Coordenada geográfica de longitude                  |
+| **REVIEW**   | id_review                   | SERIAL           | —                     | NÃO      | Identificador interno da tabela                     |
+|              | number_of_reviews           | NUMERIC          | —                     | SIM      | Total de avaliações recebidas                       |
+|              | review_scores_rating        | NUMERIC          | —                     | SIM      | Nota geral média                                    |
+|              | review_scores_accuracy      | NUMERIC          | —                     | SIM      | Nota de precisão                                    |
+|              | review_scores_cleanliness   | NUMERIC          | —                     | SIM      | Nota de limpeza                                     |
+|              | review_scores_checkin       | NUMERIC          | —                     | SIM      | Nota de check-in                                    |
+|              | review_scores_communication | NUMERIC          | —                     | SIM      | Nota de comunicação                                 |
+|              | review_scores_location      | NUMERIC          | —                     | SIM      | Nota de localização                                 |
+|              | review_scores_value         | NUMERIC          | —                     | SIM      | Nota de custo-benefício                             |
 
+# Diagrama Entidade Relacionamento (DER)
+<img width="748" height="641" alt="Diagrama CorridigoLight png" src="https://github.com/user-attachments/assets/ed5c182a-37d3-4575-87b7-29559edb6515" />
 
+# Diagrama Lógico de Dados (DLD) 
+<img width="1127" height="896" alt="DLD" src="https://github.com/user-attachments/assets/c26726ad-96c0-4431-8d01-b30436ce9997" />
 
