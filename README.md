@@ -31,6 +31,27 @@ Abra e rode o notebook principal:
 AirBnB.ipynb
 ```
 
+
+### 5️⃣ Levantar containers e popular bancos de dados
+O comando abaixo constrói as imagens e inicia os containers:
+
+```bash
+docker compose up --build
+```
+
+Serão inicializados:
+
+- 🐘 lakehouse_db → Banco PostgreSQL
+
+- ⚙️ airbnb_etl → Script Python (populate_db.py) responsável por popular as tabelas
+
+- 🌐 pgAdmin → Interface web para consulta e gerenciamento do banco
+
+Acesse o pgAdmin em:
+👉 http://localhost:5050
+- __Login:__ admin@admin.com
+- __Senha:__ admin
+
 ---
 
 ## 🧰 Tecnologias utilizadas
@@ -54,10 +75,15 @@ Este projeto visa:
 ## 📁 Estrutura do repositório
 ```
 Airbnb_2019_Rio/
-├── install.ipynb          # Instalação das dependências
-├── AirBnB.ipynb           # Análises e visualizações
-├── requirements.txt       # Lista de bibliotecas necessárias
-└── csv_collected/         # Dados baixados do Kaggle
+├── etl/
+│   ├── Dockerfile            # Imagem do container ETL
+│   ├── populate_db.py        # Script de carga de dados
+├── base_de_dados_prata.csv   # Camada prata (dados tratados)
+├── docker-compose.yml        # Orquestração dos serviços
+├── AirBnB.ipynb              # Notebook de exploração e limpeza
+├── requirements.txt          # Dependências
+└── data/                     # Volumes do PostgreSQL e pgAdmin
+
 ```
 
 ---
