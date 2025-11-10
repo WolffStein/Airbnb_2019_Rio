@@ -32,7 +32,7 @@ services:
       DB_USER: admin
       DB_PASSWORD: admin
       PYTHONUNBUFFERED: 1
-    command: ["python", "-u", "populate_db.py"]
+    #command: ["python", "-u", "populate_db.py"]
 
   pgadmin:
     image: dpage/pgadmin4
