@@ -5,3 +5,5 @@ matplotlib
 plotly
 kagglehub
 ipywidgets
+sqlalchemy
+psycopg2-binary

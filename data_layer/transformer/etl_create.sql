@@ -67,8 +67,9 @@ CREATE TABLE airbnb.dim_locations (
 DROP TABLE IF EXISTS airbnb.dim_properties CASCADE;
 CREATE TABLE airbnb.dim_properties (
     id SERIAL PRIMARY KEY,
-    host_id BIGINT REFERENCES airbnb.dim_hosts(host_id) ON DELETE SET NULL,
-    location_id INT REFERENCES airbnb.dim_locations(id) ON DELETE SET NULL,
+    -- store related ids as attributes only (star schema: dims are independent)
+    host_id BIGINT,
+    location_id INT,
     property_type TEXT,
     room_type TEXT,
     accommodates INT,
@@ -86,8 +87,9 @@ CREATE TABLE airbnb.dim_properties (
 DROP TABLE IF EXISTS airbnb.dim_reviews CASCADE;
 CREATE TABLE airbnb.dim_reviews (
     id SERIAL PRIMARY KEY,
-    host_id BIGINT REFERENCES airbnb.dim_hosts(host_id) ON DELETE SET NULL,
-    property_id INT REFERENCES airbnb.dim_properties(id) ON DELETE SET NULL,
+    -- store related ids as attributes only (star schema: dims are independent)
+    host_id BIGINT,
+    property_id INT,
     number_of_reviews INT,
     review_scores_rating NUMERIC,
     review_scores_accuracy NUMERIC,
