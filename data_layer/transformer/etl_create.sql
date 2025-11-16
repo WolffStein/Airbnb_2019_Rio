@@ -4,7 +4,7 @@
 
 BEGIN;
 
-CREATE SCHEMA IF NOT EXISTS airbnb;
+CREATE SCHEMA IF NOT EXISTS gold;
 
 DROP TABLE IF EXISTS airbnb.staging_airbnb CASCADE;
 CREATE TABLE airbnb.staging_airbnb (
