@@ -7,4 +7,3 @@ kagglehub
 ipywidgets
 sqlalchemy
 psycopg2-binary
-os
