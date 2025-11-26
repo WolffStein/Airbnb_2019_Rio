@@ -1,7 +1,4 @@
-
-version: "3.9"
-
-services:
+ services:
   postgres:
     image: postgres:14
     container_name: airbnb-db
@@ -21,7 +18,7 @@ services:
       interval: 5s
       retries: 5
       start_period: 10s
-
+ 
   pgadmin:
     image: dpage/pgadmin4
     container_name: airbnb-pgadmin
@@ -37,31 +34,33 @@ services:
       - postgres
     networks:
       - airbnb-net
-
-  etl:
-    image: python:3.10-slim
-    container_name: airbnb_etl
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./:/data
-    working_dir: /data
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: airbnb
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      PYTHONUNBUFFERED: 1
-    command: >
-      bash -c "apt-get update && apt-get install -y libpq-dev gcc && 
-      pip install papermill ipykernel && 
-      papermill data_layer/transformer/raw_to_silver.ipynb data_layer/transformer/raw_to_silver_out.ipynb -k python3 && 
-      papermill data_layer/transformer/silver_to_gold.ipynb data_layer/transformer/silver_to_gold_out.ipynb -k python3"
-
-networks:
+ 
+  # etl:
+  #   image: python:3.10-slim
+  #   container_name: airbnb_etl
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./:/data
+  #   working_dir: /data
+  #   environment:
+  #     DB_HOST: postgres
+  #     DB_PORT: 5432
+  #     DB_NAME: airbnb
+  #     DB_USER: postgres
+  #     DB_PASSWORD: postgres
+  #     PYTHONUNBUFFERED: 1
+  #   command: >
+  #     bash -c "apt-get update && apt-get install -y libpq-dev gcc &&
+  #     pip install papermill ipykernel &&
+  #     papermill data_layer/transformer/raw_to_silver.ipynb data_layer/transformer/raw_to_silver_out.ipynb -k python3 &&
+  #     papermill data_layer/transformer/silver_to_gold.ipynb data_layer/transformer/silver_to_gold_out.ipynb -k python3"
+ 
+  networks:
   airbnb-net:
-
-volumes:
+ 
+  volumes:
   pgdata:
+ 
+ 
