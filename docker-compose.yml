@@ -1,56 +1,4 @@
 
-# services:
-#   db:
-#     image: postgres:15
-#     container_name: lakehouse_db
-#     restart: always
-#     environment:
-#       POSTGRES_USER: admin
-#       POSTGRES_PASSWORD: admin
-#       POSTGRES_DB: lakehouse
-#     ports:
-#       - "5432:5432"
-#     volumes:
-#       - ./data/postgres2:/var/lib/postgresql/data
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U admin"]
-#       interval: 5s
-#       retries: 5
-#       start_period: 10s
-
-  # etl:
-  #   build: ./etl
-  #   container_name: airbnb_etl
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./:/data
-  #   environment:
-  #     DB_HOST: db
-  #     DB_PORT: 5432
-  #     DB_NAME: lakehouse
-  #     DB_USER: admin
-  #     DB_PASSWORD: admin
-  #     PYTHONUNBUFFERED: 1
-  #   #command: ["python", "-u", "populate_db.py"]
-
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: airbnb-pgadmin
-  #   restart: always
-  #   depends_on:
-  #     - db
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
-  #     PGADMIN_DEFAULT_PASSWORD: admin
-  #   ports:
-  #     - "5050:80"
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - airbnb-net
-
 version: "3.9"
 
 services:
@@ -68,6 +16,11 @@ services:
       - "5432:5432"
     networks:
       - airbnb-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
 
   pgadmin:
     image: dpage/pgadmin4
@@ -76,12 +29,36 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
     ports:
       - "5050:80"
     depends_on:
       - postgres
     networks:
       - airbnb-net
+
+  etl:
+    image: python:3.10-slim
+    container_name: airbnb_etl
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/data
+    working_dir: /data
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: airbnb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      PYTHONUNBUFFERED: 1
+    command: >
+      bash -c "apt-get update && apt-get install -y libpq-dev gcc && 
+      pip install papermill ipykernel && 
+      papermill data_layer/transformer/raw_to_silver.ipynb data_layer/transformer/raw_to_silver_out.ipynb -k python3 && 
+      papermill data_layer/transformer/silver_to_gold.ipynb data_layer/transformer/silver_to_gold_out.ipynb -k python3"
 
 networks:
   airbnb-net:
