@@ -1,13 +1,4 @@
 -- =====================================================================
--- CONSULTAS ANALÍTICAS - CAMADA GOLD
--- Dataset: Airbnb Rio de Janeiro 2019
--- Star Schema: gold.fact_ocorrencias + dimensões
--- =====================================================================
--- Proposta: Análise completa do mercado de hospedagem do Airbnb no Rio
--- Foco: Precificação, qualidade, geografia, comportamento de hosts
--- =====================================================================
-
--- =====================================================================
 -- SEÇÃO 1: ANÁLISE DE HOSTS E COMPETITIVIDADE
 -- =====================================================================
 
@@ -586,11 +577,4 @@ JOIN gold.dim_properties p ON tp.srk_property_id = p.srk_property_id
 JOIN gold.dim_hosts h ON p.srk_host_id = h.srk_host_id
 JOIN gold.fact_ocorrencias f ON p.srk_property_id = f.srk_property_id
 JOIN gold.dim_reviews r ON p.srk_property_id = r.srk_property_id;
-
--- =====================================================================
--- FIM DAS CONSULTAS ANALÍTICAS
--- =====================================================================
--- Total de queries: 20 análises estratégicas
--- Categorias: Hosts, Precificação, Qualidade, Geografia, 
---             Temporal, Modelos de Negócio, Insights Estratégicos
 -- =====================================================================
