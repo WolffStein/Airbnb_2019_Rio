@@ -221,8 +221,3 @@ Próximos passos sugeridos
 Contatos
 - Edilberto Almeida Cantuária — [LinkedIn](https://www.linkedin.com/in/edilberto-cantuaria)
 - Wolfgang Friedrich Stein — [GitHub](https://github.com/WolffStein)
-
----
-
-Se quiser, eu atualizo este README com comandos específicos para Windows/PowerShell, exemplos de queries de validação (SELECTs JOIN) ou adiciono um pequeno script `check_etl.sh` para rodar verificações pós-ETL automaticamente. Diga o que prefere.
-└── data/                     # Volumes do PostgreSQL e pgAdmin
